@@ -19,7 +19,7 @@
  * Difficulty: 1
  */
 int bitAnd(int x, int y) {
-    return 2;
+    return ~((~x)|(~y));
 }
 
 /*
@@ -30,7 +30,9 @@ int bitAnd(int x, int y) {
  *   Difficulty: 1
  */
 int bitXor(int x, int y) {
-    return 2;
+    // x^y = (x|y)&(~x|~y)
+    // transfer | into &
+    return ~(~x&~y)&~(x&y);
 }
 
 /*
@@ -50,7 +52,11 @@ int bitXor(int x, int y) {
  *   1 if x and y have the same sign , 0 otherwise.
  */
 int samesign(int x, int y) {
-    return 2;
+    int t=!y;
+    if(!x)return t;
+    if(t)return 0; 
+	int a=(x>>31),b=(y>>31);
+	return !(a^b);
 }
 
 /*
@@ -63,7 +69,35 @@ int samesign(int x, int y) {
  *   Difficulty: 4
  */
 int logtwo(int v) {
-    return 2;
+    // return 2;
+    int op,x=v,now=0,tmp;
+    
+    op=(x>>16)>0;
+    tmp=op<<4;
+    x=x>>tmp;
+    now=now|tmp;
+
+    op=(x>>8)>0;
+    tmp=op<<3;
+    x=x>>tmp;
+    now=now|tmp;
+
+    op=(x>>4)>0;
+    tmp=op<<2;
+    x=x>>tmp;
+    now=now|tmp;
+
+    op=(x>>2)>0;
+    tmp=op<<1;
+    x=x>>tmp;
+    now=now|tmp;
+
+    op=(x>>1)>0;
+    tmp=op;
+    x=x>>tmp;
+    now=now|tmp;
+    
+    return now;
 }
 
 /*
@@ -76,7 +110,9 @@ int logtwo(int v) {
  *    Difficulty: 2
  */
 int byteSwap(int x, int n, int m) {
-    return 2;
+    int s=n<<3,t=m<<3;
+    int a=(x>>s)&0xff,b=(x>>t)&0xff;
+    return (x&(0xffffffff^(0xff<<s)^(0xff<<t)))^(a<<t)^(b<<s);
 }
 
 /*
@@ -88,7 +124,13 @@ int byteSwap(int x, int n, int m) {
  *   Difficulty: 3
  */
 unsigned reverse(unsigned v) {
-    return 2;
+    unsigned x=v;
+    x=((x&0x55555555)<<1)|((x>>1)&0x55555555);
+    x=((x&0x33333333)<<2)|((x>>2)&0x33333333);
+    x=((x&0x0f0f0f0f)<<4)|((x>>4)&0x0f0f0f0f);
+    x=((x&0x00ff00ff)<<8)|((x>>8)&0x00ff00ff);
+    x=((x&0x0000ffff)<<16)|((x>>16)&0x0000ffff);
+    return x;
 }
 
 /*
@@ -100,7 +142,11 @@ unsigned reverse(unsigned v) {
  *   Difficulty: 3
  */
 int logicalShift(int x, int n) {
-    return 2;
+    int op=x&0x80000000;
+    x=x^op;
+    x=x>>n;
+    x=x^((!!op)<<(31u^n));
+    return x;
 }
 
 /*
@@ -112,7 +158,31 @@ int logicalShift(int x, int n) {
  *   Difficulty: 4
  */
 int leftBitCount(int x) {
-    return 2;
+    int ans=0,op=0,tmp=0;
+
+	//op:前面是否都是1 
+	op=!((x^0xffff0000)>>16);
+    ans=ans+(op<<4);
+    x=(x>>((!op)<<4))&0x0000ffff;
+    
+    op=!((x>>8)^0x000000ff);
+    ans=ans+(op<<3);
+    x=(x>>((!op)<<3))&0x000000ff;
+
+    op=!((x>>4)^0x0000000f);
+    ans=ans+(op<<2);
+    x=(x>>((!op)<<2))&0x0000000f;
+    
+    op=!((x>>2)^0x00000003);
+    ans=ans+(op<<1);
+    x=(x>>((!op)<<1))&0x00000003;
+
+	op=!((x>>1)^0x00000001);
+	ans=ans+op;
+	x=(x>>(!op))&0x00000001; 
+	
+	ans=ans+x;
+    return ans;
 }
 
 /*
@@ -123,8 +193,44 @@ int leftBitCount(int x) {
  *   Max ops: 30
  *   Difficulty: 4
  */
-unsigned float_i2f(int x) {
-    return 2;
+
+/*
+ * float_i2f - Return bit-level equivalent of expression (float) x
+ *   Result is returned as unsigned int, but it is to be interpreted as
+ *   the bit-level representation of a single-precision floating point values.
+ *   Legal ops: if else while for & | ~ + - >> << < > ! ==
+ *   Max ops: 30
+ *   Difficulty: 4
+ */
+
+unsigned float_i2f(int u) {
+	if(u==0)return 0u; 
+    unsigned ans=0,x=u;
+    if(u<0)x=-x,ans=0x80000000u;
+
+    //l=-1
+    unsigned l=0xffffffff;
+    unsigned zzt=x;
+    while(zzt)l+=1,zzt=zzt>>1;
+    
+    unsigned e=l+127;
+    unsigned tmp=x-(1<<l);
+	if(l<23)ans=ans|(tmp<<(23-l));
+	else
+    {
+        unsigned step=l-23,lost=0,half=1<<(step-1);
+        unsigned pwstep=1<<step;
+        if(lost=tmp&(pwstep-1))
+        {
+            if((lost>half)|((lost==half)&(tmp>>step)))
+                tmp=tmp+pwstep;
+        }
+        tmp=tmp>>step;
+        if(tmp==0x00800000)e=e+1,tmp=0;
+        ans=ans|tmp;
+    }
+    ans=ans|(e<<23);
+    return ans;
 }
 
 /*
@@ -139,7 +245,17 @@ unsigned float_i2f(int x) {
  *   Difficulty: 4
  */
 unsigned floatScale2(unsigned uf) {
-    return 2;
+    int e=(uf>>23)&0x000000ff;
+    if(e==255)return uf;
+    if(e) // 规格化
+    {
+		e=e+1; 
+        return (uf&0x807fffff)|(e<<23);
+    }
+    //非规格化
+    unsigned f=uf&0x007fffff;
+    f=f<<1;
+    return (uf&(1u<<31))|f;
 }
 
 /*
@@ -156,9 +272,17 @@ unsigned floatScale2(unsigned uf) {
  *   Difficulty: 3
  */
 int float64_f2i(unsigned uf1, unsigned uf2) {
-    return 2;
-}
-
+    //uf2 uf1
+    int op=uf2>>30;uf2=uf2&0x7fffffff;
+    int E=(uf2>>20)-1023;
+    if(E<0)return 0;
+    if(E>=31)return 0x80000000;
+    int val=0x40000000|((uf2&0x000fffff)<<20)|(uf1>>12);
+    val=val>>(30-E);
+    if(op)return -val;
+    return val;
+}//总共31位   1+10+20
+//001111111111
 /*
  * floatPower2 - Return bit-level equivalent of the expression 2.0^x
  *   (2.0 raised to the power x) for any 32-bit integer x.
@@ -173,5 +297,15 @@ int float64_f2i(unsigned uf1, unsigned uf2) {
  *   Difficulty: 4
  */
 unsigned floatPower2(int x) {
-    return 2;
+    if(x>127)return 0x7f800000;
+    if(x<-149)return 0;
+    if(x>=-126)
+    {
+        int e=x+127;
+        return e<<23;
+    }
+    //x < -127
+    //x>=-149
+    return 1<<(149+x);
 }
+//-126-23
